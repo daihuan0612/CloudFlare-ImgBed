@@ -1,4 +1,4 @@
-import { errorHandling, telemetryData, checkDatabaseConfig } from '../utils/middleware';
+import { checkDatabaseConfig } from '../utils/middleware';
 
 // CORS 跨域响应头
 const corsHeaders = {
@@ -19,4 +19,4 @@ async function handleOptions(context) {
     return context.next();
 }
 
-export const onRequest = [checkDatabaseConfig, handleOptions, errorHandling, telemetryData];
+export const onRequest = [checkDatabaseConfig, handleOptions];
