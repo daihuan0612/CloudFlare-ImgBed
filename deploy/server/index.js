@@ -279,7 +279,7 @@ async function handleFunctionRequest(originalRequest, pathname) {
         middlewares.push(...mod.onRequest.slice(0, -1));
     }
 
-    // 模拟 Cloudflare 的 request.cf 属性（telemetryData 等中间件依赖该属性）
+    // 模拟 Cloudflare 的 request.cf 属性
     if (!request.cf) {
         request.cf = {
             country: 'XX',
