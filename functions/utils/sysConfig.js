@@ -137,8 +137,6 @@ export async function fetchOthersConfig(env) {
     } catch (error) {
         console.error('Failed to fetch others config:', error);
         // 返回默认配置
-        return {
-            telemetry: { enabled: false }
-        };
+        return {};
     }
 }
