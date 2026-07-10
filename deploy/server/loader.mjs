@@ -1,29 +1,13 @@
 /**
  * 自定义 ESM Loader
- * 1. 自动为无扩展名的相对导入添加 .js 后缀
- * 2. 将 Cloudflare 特定的包重定向到本地 mock
+ * 自动为无扩展名的相对导入添加 .js 后缀
  */
 
 import { fileURLToPath, pathToFileURL } from 'url';
 import { existsSync } from 'fs';
 import { dirname, resolve as pathResolve } from 'path';
 
-// Mock 文件路径
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const MOCKS = {
-    '@cloudflare/pages-plugin-sentry': pathResolve(__dirname, 'mocks/sentry-plugin.js'),
-    '@sentry/tracing': pathResolve(__dirname, 'mocks/sentry-tracing.js'),
-};
-
 export async function resolve(specifier, context, nextResolve) {
-    // 拦截 Cloudflare 特定的包
-    if (MOCKS[specifier]) {
-        return {
-            url: pathToFileURL(MOCKS[specifier]).href,
-            shortCircuit: true,
-        };
-    }
-
     // 处理无扩展名的相对导入
     if (specifier.startsWith('.') && !hasExtension(specifier)) {
         const parentDir = context.parentURL
