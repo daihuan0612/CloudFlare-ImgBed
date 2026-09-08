@@ -27,7 +27,9 @@ export async function onRequest(context) {
     // POST保存设置
     if (request.method === 'POST') {
         const body = await request.json()
-        const settings = body
+        const previousSettings = await getPageConfig(db, env)
+        const settings = processAnnouncementInfo(body, previousSettings)
+
         // 写入数据库
         await db.put('manage@sysConfig@page', JSON.stringify(settings))
 
@@ -46,6 +48,10 @@ export async function getPageConfig(db, env) {
     const settingsStr = await db.get('manage@sysConfig@page')
     const settingsKV = settingsStr ? JSON.parse(settingsStr) : {}
 
+    if (Number.isFinite(Number(settingsKV.announcementRefreshAt))) {
+        settings.announcementRefreshAt = Number(settingsKV.announcementRefreshAt)
+    }
+
     const config = []
     settings.config = config
     config.push(
@@ -62,6 +68,19 @@ export async function getPageConfig(db, env) {
             id: 'siteIcon',
             label: '网站图标',
             label_en: 'Site Icon',
+            category: '全局设置',
+            category_en: 'Global Settings',
+        },
+        {
+            id: 'defaultLanguage',
+            label: '默认语言',
+            label_en: 'Default Language',
+            type: 'select',
+            options: [
+                { label: '简体中文', value: 'zh-CN', label_en: '简体中文' },
+                { label: 'English', value: 'en', label_en: 'English' },
+            ],
+            default: 'zh-CN',
             category: '全局设置',
             category_en: 'Global Settings',
         },
@@ -91,6 +110,17 @@ export async function getPageConfig(db, env) {
             category_en: 'Global Settings',
         },
         {
+            id: 'wallpaperEnabled',
+            label: '启用背景图',
+            label_en: 'Enable Background Image',
+            type: 'boolean',
+            default: true,
+            tooltip: '控制所有页面的背景图开关，关闭后将使用纯色背景',
+            tooltip_en: 'Toggle background images across all pages. When off, a solid color background will be used',
+            category: '全局设置',
+            category_en: 'Global Settings',
+        },
+        {
             id: 'bkInterval',
             label: '背景切换间隔',
             label_en: 'Background Interval',
@@ -115,7 +145,7 @@ export async function getPageConfig(db, env) {
             label: '默认URL前缀',
             label_en: 'Default URL Prefix',
             tooltip: '自定义URL前缀，如：https://img.a.com/file/，留空则使用当前域名 <br/> 设置后将应用于客户端和管理端',
-            tooltip_en: 'Custom URL prefix, e.g. https://img.a.com/file/. Leave empty to use current domain <br/> Applies to both client and admin',
+            tooltip_en: 'Custom URL prefix, e.g. https://img.a.com/file/. Leave empty to use current domain <br/> Applies to both client and admin <br/> This option is intended for scenarios such as CDN acceleration. Make sure the custom prefix is accessible',
             category: '全局设置',
             category_en: 'Global Settings',
         },
@@ -296,8 +326,9 @@ export async function getPageConfig(db, env) {
             if (typeof parsedConfig === 'object' && parsedConfig !== null) {
                 // 搜索config中的id，如果存在则更新
                 for (let i = 0; i < config.length; i++) {
-                    if (parsedConfig[config[i].id]) {
-                        config[i].value = parsedConfig[config[i].id]
+                    const id = config[i].id
+                    if (Object.prototype.hasOwnProperty.call(parsedConfig, id)) {
+                        config[i].value = parsedConfig[id]
                     }
                 }
             }
@@ -313,6 +344,35 @@ export async function getPageConfig(db, env) {
         if (index !== -1) {
             config[index].value = item.value
         }
+    }
+
+    return settings
+}
+
+/**
+ * 处理公告内容及其刷新状态。
+ * 公告内容变化或管理员主动刷新时生成新版本；否则沿用旧版本，
+ * 确保修改标题、背景等无关设置不会让公告重复弹出。
+ */
+function processAnnouncementInfo(settings, previousSettings) {
+    const previousAnnouncement = Array.isArray(previousSettings.config)
+        ? previousSettings.config.find(item => item?.id === 'announcement')?.value ?? ''
+        : ''
+    const nextAnnouncement = Array.isArray(settings.config)
+        ? settings.config.find(item => item?.id === 'announcement')?.value ?? ''
+        : ''
+    const shouldRefreshAnnouncement =
+        previousAnnouncement !== nextAnnouncement || settings.refreshAnnouncement === true
+
+    // 该字段只是前端发来的单次操作指令，不应进入持久化配置。
+    delete settings.refreshAnnouncement
+
+    if (shouldRefreshAnnouncement) {
+        settings.announcementRefreshAt = Date.now()
+    } else if (previousSettings.announcementRefreshAt) {
+        settings.announcementRefreshAt = previousSettings.announcementRefreshAt
+    } else {
+        delete settings.announcementRefreshAt
     }
 
     return settings
