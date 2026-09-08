@@ -105,7 +105,7 @@ export async function fetchSecurityConfig(env, options = {}) {
                 admin: { adminUsername: "", adminPassword: "" }
             },
             upload: {
-                moderate: { enabled: false, channel: "default", moderateContentApiKey: "", nsfwApiPath: "" },
+
                 ipQuery: {
                     enabled: false,
                     channel: "customApi",

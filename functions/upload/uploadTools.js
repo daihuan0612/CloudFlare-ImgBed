@@ -1,5 +1,5 @@
 import { fetchSecurityConfig } from "../utils/sysConfig";
-import { purgeCFCache, purgeRandomFileListCache, purgePublicFileListCache } from "../utils/purgeCache";
+import { purgeCFCache, purgePublicFileListCache } from "../utils/purgeCache";
 import { addFileToIndex } from "../utils/indexManager.js";
 import { getDatabase } from '../utils/databaseAdapter.js';
 
@@ -295,76 +295,8 @@ export function getImageDimensions(buffer, fileType) {
 
 // 图像审查
 export async function moderateContent(env, url) {
-    const securityConfig = await fetchSecurityConfig(env);
-    const uploadModerate = securityConfig.upload.moderate;
-
-    const enableModerate = uploadModerate && uploadModerate.enabled;
-
-    let label = "None";
-
-    // 如果未启用审查，直接返回label
-    if (!enableModerate) {
-        return label;
-    }
-
-    // moderatecontent.com 渠道
-    if (uploadModerate.channel === 'moderatecontent.com') {
-        const apikey = uploadModerate.moderateContentApiKey;
-        if (apikey == undefined || apikey == null || apikey == "") {
-            label = "None";
-        } else {
-            try {
-                const params = new URLSearchParams({ key: apikey, url: url });
-                const fetchResponse = await fetch('https://api.moderatecontent.com/moderate/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: params.toString()
-                });
-                if (!fetchResponse.ok) {
-                    throw new Error(`HTTP error! status: ${fetchResponse.status}`);
-                }
-                const moderate_data = await fetchResponse.json();
-                if (moderate_data.rating_label) {
-                    label = moderate_data.rating_label;
-                }
-            } catch (error) {
-                console.error('Moderate Error:', error);
-                // 将不带审查的图片写入数据库
-                label = "None";
-            }
-        }
-        return label;
-    }
-
-    // nsfw 渠道
-    if (uploadModerate.channel === 'nsfwjs') {
-        const nsfwApiPath = securityConfig.upload.moderate.nsfwApiPath;
-
-        try {
-            const fetchResponse = await fetch(`${nsfwApiPath}?url=${encodeURIComponent(url)}`);
-            if (!fetchResponse.ok) {
-                throw new Error(`HTTP error! status: ${fetchResponse.status}`);
-            }
-            const moderate_data = await fetchResponse.json();
-
-            const score = moderate_data.score || 0;
-            if (score >= 0.9) {
-                label = "adult";
-            } else if (score >= 0.7) {
-                label = "teen";
-            } else {
-                label = "everyone";
-            }
-        } catch (error) {
-            console.error('Moderate Error:', error);
-            // 将不带审查的图片写入数据库
-            label = "None";
-        }
-
-        return label;
-    }
-
-    return label;
+    // 图像审查功能已整体移除（隐私考虑）：始终返回 None，不调用任何第三方审核服务
+    return "None";
 }
 
 // 清除CDN缓存
@@ -380,8 +312,6 @@ export async function purgeCDNCache(env, cdnUrl, url, normalizedFolder) {
         console.error('Failed to clear CDN cache:', error);
     }
 
-    // 清除 api/randomFileList 等API缓存
-    await purgeRandomFileListCache(url.origin, normalizedFolder);
     await purgePublicFileListCache(url.origin, normalizedFolder);
 }
 

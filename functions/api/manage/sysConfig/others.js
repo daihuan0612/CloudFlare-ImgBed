@@ -74,13 +74,7 @@ export async function getOthersConfig(db, env) {
     const settingsStr = await db.get('manage@sysConfig@others')
     const settingsKV = settingsStr ? JSON.parse(settingsStr) : {}
 
-    // 随机图API
-    const kvRandomImageAPI = settingsKV.randomImageAPI || {}
-    settings.randomImageAPI = {
-        enabled: kvRandomImageAPI.enabled ?? env.AllowRandom === 'true',
-        allowedDir: kvRandomImageAPI.allowedDir ?? '',
-        fixed: false,
-    }
+    
 
     // CloudFlare API Token
     const kvCloudflareApiToken = settingsKV.cloudflareApiToken || {}

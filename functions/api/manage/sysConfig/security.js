@@ -159,12 +159,6 @@ export async function getSecurityConfig(db, env) {
     // 上传管理
     const kvUpload = settingsKV.upload || {}
     const upload = {
-        moderate: {
-            enabled: kvUpload.moderate?.enabled ?? false,
-            channel: kvUpload.moderate?.channel || 'moderatecontent.com', // [moderatecontent.com, nsfwjs]
-            moderateContentApiKey: kvUpload.moderate?.moderateContentApiKey || kvUpload.moderate?.apiKey || env.ModerateContentApiKey || '',
-            nsfwApiPath: kvUpload.moderate?.nsfwApiPath || '',
-        },
         ipQuery: {
             enabled: kvUpload.ipQuery?.enabled ?? false,
             channel: kvUpload.ipQuery?.channel || 'customApi',

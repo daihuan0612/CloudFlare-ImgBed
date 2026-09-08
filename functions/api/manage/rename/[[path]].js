@@ -1,5 +1,4 @@
 import { S3Client, CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { purgeCFCache, purgeRandomFileListCache, purgePublicFileListCache } from "../../../utils/purgeCache";
 import { moveFileInIndex } from "../../../utils/indexManager.js";
 import { getDatabase } from '../../../utils/databaseAdapter.js';
 import { sanitizeUploadFolder } from "../../../upload/uploadTools.js";
@@ -173,10 +172,9 @@ export async function onRequest(context) {
         const cdnUrl = `https://${url.hostname}/file/${fileId}`;
         await purgeCFCache(env, cdnUrl);
 
-        // 清除 api/randomFileList 等 API 缓存
         const normalizedFolder = fileId.split('/').slice(0, -1).join('/');
         const normalizedDist = newFileId.split('/').slice(0, -1).join('/');
-        await purgeRandomFileListCache(url.origin, normalizedFolder, normalizedDist);
+
         await purgePublicFileListCache(url.origin, normalizedFolder, normalizedDist);
 
         // 更新索引

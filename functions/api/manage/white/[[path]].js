@@ -1,4 +1,3 @@
-import { purgeCFCache, purgeRandomFileListCache, purgePublicFileListCache } from "../../../utils/purgeCache";
 import { addFileToIndex } from "../../../utils/indexManager.js";
 import { getDatabase } from "../../../utils/databaseAdapter.js";
 import { cleanPersistedMetadata } from "../../../utils/metadata/metadataSecurity.js";
@@ -36,9 +35,8 @@ export async function onRequest(context) {
     // 清除CDN缓存
     await purgeCFCache(env, cdnUrl);
 
-    // 清除 randomFileList 等API缓存
     const normalizedFolder = params.path.split('/').slice(0, -1).join('/');
-    await purgeRandomFileListCache(url.origin, normalizedFolder);
+
     await purgePublicFileListCache(url.origin, normalizedFolder);
 
     // 更新索引
