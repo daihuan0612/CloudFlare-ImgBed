@@ -49,7 +49,7 @@ export async function createSession(env, authType, username = '') {
     });
 
     const cookieName = COOKIE_NAMES[authType] || 'session';
-    const cookie = buildSessionCookie(cookieName, token, maxAge, secure);
+    const cookie = buildSessionCookie(cookieName, token, maxAge, secure, authType !== 'admin');
     return { token, cookie };
 }
 
@@ -210,14 +210,18 @@ function getCookieValue(request, name) {
  * @param {boolean} secure - 是否添加 Secure 属性
  * @returns {string}
  */
-function buildSessionCookie(name, token, maxAge, secure = false) {
+function buildSessionCookie(name, token, maxAge, secure = false, includeMaxAge = true) {
     const parts = [
         `${name}=${token}`,
         `Path=/`,
         `HttpOnly`,
         `SameSite=Strict`,
-        `Max-Age=${maxAge}`,
     ];
+    // 管理端会话为浏览器级会话 cookie（不设 Max-Age，关闭浏览器即失效）；
+    // 用户端会话保持持久化 Max-Age
+    if (includeMaxAge) {
+        parts.push(`Max-Age=${maxAge}`);
+    }
     if (secure) {
         parts.push('Secure');
     }
