@@ -49,7 +49,8 @@ export async function createSession(env, authType, username = '') {
     });
 
     const cookieName = COOKIE_NAMES[authType] || 'session';
-    const cookie = buildSessionCookie(cookieName, token, maxAge, secure, authType !== 'admin');
+    // 管理端与用户端会话均为浏览器级（不设 Max-Age）：关闭浏览器即失效，需重新登录
+    const cookie = buildSessionCookie(cookieName, token, maxAge, secure, false);
     return { token, cookie };
 }
 
@@ -217,8 +218,8 @@ function buildSessionCookie(name, token, maxAge, secure = false, includeMaxAge =
         `HttpOnly`,
         `SameSite=Strict`,
     ];
-    // 管理端会话为浏览器级会话 cookie（不设 Max-Age，关闭浏览器即失效）；
-    // 用户端会话保持持久化 Max-Age
+    // 会话 cookie 不设 Max-Age（浏览器级）：关闭浏览器即失效，下次需重新登录。
+    // 避免"在他人设备登录过一次后长期可用"；KV 会话 TTL 仅作兜底清理。
     if (includeMaxAge) {
         parts.push(`Max-Age=${maxAge}`);
     }
