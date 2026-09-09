@@ -1,6 +1,7 @@
 import { addFileToIndex } from "../../../utils/indexManager.js";
 import { getDatabase } from "../../../utils/databaseAdapter.js";
 import { cleanPersistedMetadata } from "../../../utils/metadata/metadataSecurity.js";
+import { purgeCFCache, purgeEdgeCache, purgePublicFileListCache } from "../../../utils/purgeCache.js";
 
 export async function onRequest(context) {
     // Contents of context object
@@ -34,6 +35,9 @@ export async function onRequest(context) {
 
     // 清除CDN缓存
     await purgeCFCache(env, cdnUrl);
+
+    // 尽力清除边缘节点缓存（不依赖 Cloudflare API Token）
+    await purgeEdgeCache(cdnUrl);
 
     const normalizedFolder = params.path.split('/').slice(0, -1).join('/');
 

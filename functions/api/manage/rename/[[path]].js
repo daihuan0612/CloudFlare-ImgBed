@@ -9,6 +9,7 @@ import {
 } from "../../../utils/metadata/channelCredentials.js";
 import { cleanPersistedMetadataInPlace } from "../../../utils/metadata/metadataSecurity.js";
 import { buildFileMetadataForManagement } from "../../../utils/metadata/metadataView.js";
+import { purgeCFCache, purgeEdgeCache, purgePublicFileListCache } from "../../../utils/purgeCache.js";
 
 // CORS 跨域响应头
 const corsHeaders = {
@@ -169,8 +170,11 @@ export async function onRequest(context) {
         await db.delete(fileId);
 
         // 清除 CDN 缓存
-        const cdnUrl = `https://${url.hostname}/file/${fileId}`;
+        const cdnUrl = `${url.origin}/file/${fileId.split('/').map(encodeURIComponent).join('/')}`;
         await purgeCFCache(env, cdnUrl);
+
+        // 尽力清除边缘节点缓存（不依赖 Cloudflare API Token）
+        await purgeEdgeCache(cdnUrl);
 
         const normalizedFolder = fileId.split('/').slice(0, -1).join('/');
         const normalizedDist = newFileId.split('/').slice(0, -1).join('/');

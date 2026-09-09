@@ -73,7 +73,14 @@ export async function onRequest(context) {  // Contents of context object
     const db = getDatabase(env);
     const imgRecord = await db.getWithMetadata(fileId);
     if (!imgRecord) {
-        return new Response('Error: Image Not Found', { status: 404 });
+        // 记录不存在（如文件已删除）：禁止缓存，避免浏览器/CDN 残留错误响应
+        return new Response('Error: Image Not Found', {
+            status: 404,
+            headers: {
+                'Content-Type': 'text/plain;charset=UTF-8',
+                'Cache-Control': FILE_CACHE_CONTROL.NO_STORE,
+            },
+        });
     }
 
     // 如果metadata不存在，只可能是之前未设置KV，且存储在Telegraph上的图片

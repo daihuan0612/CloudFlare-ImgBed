@@ -182,7 +182,7 @@ export async function return404(url) {
             {
                 status: 404,
                 headers: {
-                    "Cache-Control": "public, max-age=86400"
+                    "Cache-Control": FILE_CACHE_CONTROL.NO_STORE
                 }
             }
         );
@@ -192,7 +192,8 @@ export async function return404(url) {
             headers: {
                 "Content-Type": "image/png",
                 "Content-Disposition": "inline",
-                "Cache-Control": "public, max-age=86400",
+                // 错误占位图禁止缓存，避免文件删除/恢复后浏览器或 CDN 仍残留旧响应
+                "Cache-Control": FILE_CACHE_CONTROL.NO_STORE,
             },
         });
     }
@@ -205,7 +206,7 @@ export async function returnBlockImg(url) {
             status: 302,
             headers: {
                 "Location": url.origin + "/blockimg",
-                "Cache-Control": "public, max-age=86400"
+                "Cache-Control": FILE_CACHE_CONTROL.NO_STORE
             }
         })
     } else {
@@ -214,7 +215,8 @@ export async function returnBlockImg(url) {
             headers: {
                 "Content-Type": "image/png",
                 "Content-Disposition": "inline",
-                "Cache-Control": "public, max-age=86400",
+                // 屏蔽状态可能随时变更，占位图禁止缓存
+                "Cache-Control": FILE_CACHE_CONTROL.NO_STORE,
             },
         });
     }
@@ -227,7 +229,7 @@ export async function returnWhiteListImg(url) {
             status: 302,
             headers: {
                 "Location": url.origin + "/whiteliston",
-                "Cache-Control": "public, max-age=86400"
+                "Cache-Control": FILE_CACHE_CONTROL.NO_STORE
             }
         })
     } else {
@@ -236,7 +238,8 @@ export async function returnWhiteListImg(url) {
             headers: {
                 "Content-Type": "image/png",
                 "Content-Disposition": "inline",
-                "Cache-Control": "public, max-age=86400",
+                // 白名单模式可能随时变更，占位图禁止缓存
+                "Cache-Control": FILE_CACHE_CONTROL.NO_STORE,
             },
         });
     }

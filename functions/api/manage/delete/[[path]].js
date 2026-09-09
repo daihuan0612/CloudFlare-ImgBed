@@ -4,12 +4,19 @@ import { getDatabase } from '../../../utils/databaseAdapter.js';
 import { DiscordAPI } from '../../../utils/storage/discordAPI.js';
 import { HuggingFaceAPI } from '../../../utils/storage/huggingfaceAPI.js';
 import { WebDAVAPI } from '../../../utils/storage/webdavAPI.js';
+import { purgeCFCache, purgeEdgeCache, purgePublicFileListCache } from '../../../utils/purgeCache.js';
 import {
     resolveDiscordCredentials,
     resolveHuggingFaceCredentials,
     resolveS3Credentials,
     resolveWebDAVCredentials,
 } from '../../../utils/metadata/channelCredentials.js';
+
+// 构造编码后的文件 CDN URL（中文/空格等特殊字符需逐段编码，否则缓存清理接口会失效）
+function buildEncodedCdnUrl(url, fileId) {
+    const encodedPath = fileId.split('/').map(encodeURIComponent).join('/');
+    return `${url.origin}/file/${encodedPath}`;
+}
 
 // CORS 跨域响应头
 const corsHeaders = {
@@ -53,7 +60,7 @@ export async function onRequest(context) {
                 // 处理当前文件夹下的所有文件
                 for (const file of files) {
                     const fileId = file.name;
-                    const cdnUrl = `https://${url.hostname}/file/${fileId}`;
+                    const cdnUrl = buildEncodedCdnUrl(url, fileId);
 
                     const success = await deleteFile(env, fileId, cdnUrl, url);
                     if (success) {
@@ -101,7 +108,7 @@ export async function onRequest(context) {
         // 解码params.path
         params.path = decodeURIComponent(params.path);
         const fileId = params.path.split(',').join('/');
-        const cdnUrl = `https://${url.hostname}/file/${fileId}`;
+        const cdnUrl = buildEncodedCdnUrl(url, fileId);
 
         const success = await deleteFile(env, fileId, cdnUrl, url);
         if (!success) {
@@ -143,8 +150,18 @@ export async function deleteFile(env, fileId, cdnUrl, url) {
 
         // 如果是R2渠道的图片，需要删除R2中对应的图片
         if (img.metadata?.Channel === 'CloudflareR2') {
-            const R2DataBase = env.img_r2;
-            await R2DataBase.delete(fileId);
+            if (typeof env.img_r2 == "undefined" || env.img_r2 == null || env.img_r2 == "") {
+                // R2 绑定未配置（如部署时漏配 binding），仅记录错误，不阻断数据库记录删除
+                console.error('R2 binding (img_r2) is not configured, skip deleting R2 object');
+            } else {
+                try {
+                    const R2DataBase = env.img_r2;
+                    await R2DataBase.delete(fileId);
+                } catch (r2Error) {
+                    // R2 对象删除失败不应阻断数据库记录删除，避免文件残留在图床列表中
+                    console.error('R2 Delete Failed:', r2Error);
+                }
+            }
         }
 
         // S3 渠道的图片，需要删除S3中对应的图片
@@ -173,6 +190,9 @@ export async function deleteFile(env, fileId, cdnUrl, url) {
 
         // 清除CDN缓存
         await purgeCFCache(env, cdnUrl);
+
+        // 尽力清除边缘节点缓存（不依赖 Cloudflare API Token）
+        await purgeEdgeCache(cdnUrl);
 
         const normalizedFolder = fileId.split('/').slice(0, -1).join('/');
 

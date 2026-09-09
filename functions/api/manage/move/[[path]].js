@@ -8,6 +8,7 @@ import {
     resolveWebDAVCredentials,
 } from "../../../utils/metadata/channelCredentials.js";
 import { cleanPersistedMetadata } from "../../../utils/metadata/metadataSecurity.js";
+import { purgeCFCache, purgeEdgeCache, purgePublicFileListCache } from "../../../utils/purgeCache.js";
 
 export async function onRequest(context) {
     const { request, env, params, waitUntil } = context;
@@ -52,7 +53,7 @@ export async function onRequest(context) {
                     const fileId = file.name;
                     const fileName = file.name.split('/').pop();
                     const newFileId = `${folderDist}/${fileName}`;
-                    const cdnUrl = `https://${url.hostname}/file/${fileId}`;
+                    const cdnUrl = `${url.origin}/file/${fileId.split('/').map(encodeURIComponent).join('/')}`;
 
                     const success = await moveFile(env, fileId, newFileId, cdnUrl, url);
                     if (success) {
@@ -104,7 +105,7 @@ export async function onRequest(context) {
         const fileId = params.path.split(',').join('/');
         const fileKey = fileId.split('/').pop();
         const newFileId = dist === '' ? fileKey : `${dist}/${fileKey}`;
-        const cdnUrl = `https://${url.hostname}/file/${fileId}`;
+        const cdnUrl = `${url.origin}/file/${fileId.split('/').map(encodeURIComponent).join('/')}`;
 
         const success = await moveFile(env, fileId, newFileId, cdnUrl, url);
         if (!success) {
@@ -186,6 +187,9 @@ async function moveFile(env, fileId, newFileId, cdnUrl, url) {
 
         // 清除CDN缓存
         await purgeCFCache(env, cdnUrl);
+
+        // 尽力清除边缘节点缓存（不依赖 Cloudflare API Token）
+        await purgeEdgeCache(cdnUrl);
 
         const normalizedFolder = fileId.split('/').slice(0, -1).join('/');
         const normalizedDist = newFileId.split('/').slice(0, -1).join('/');
