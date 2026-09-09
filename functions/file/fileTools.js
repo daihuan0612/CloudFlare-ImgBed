@@ -175,28 +175,24 @@ function unauthorizedAdminPreviewResponse() {
     });
 }
 
+// 1x1 透明 GIF：文件不存在时返回，<img> 渲染为不可见像素而非破碎图标
+const TRANSPARENT_PIXEL = new Uint8Array([
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
+    0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21, 0xf9,
+    0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00,
+    0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01,
+    0x00, 0x3b
+]);
+
 export async function return404(url) {
-    const Img404 = await fetch(url.origin + "/static/media/404.png");
-    if (!Img404.ok) {
-        return new Response('Error: Image Not Found',
-            {
-                status: 404,
-                headers: {
-                    "Cache-Control": FILE_CACHE_CONTROL.NO_STORE
-                }
-            }
-        );
-    } else {
-        return new Response(Img404.body, {
-            status: 404,
-            headers: {
-                "Content-Type": "image/png",
-                "Content-Disposition": "inline",
-                // 错误占位图禁止缓存，避免文件删除/恢复后浏览器或 CDN 仍残留旧响应
-                "Cache-Control": FILE_CACHE_CONTROL.NO_STORE,
-            },
-        });
-    }
+    return new Response(TRANSPARENT_PIXEL, {
+        status: 404,
+        headers: {
+            "Content-Type": "image/gif",
+            "Content-Disposition": "inline",
+            "Cache-Control": FILE_CACHE_CONTROL.NO_STORE,
+        },
+    });
 }
 
 export async function returnBlockImg(url) {
